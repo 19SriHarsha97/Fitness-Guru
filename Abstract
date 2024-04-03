@@ -7,4 +7,4 @@ Users will be able to prompt the LLM for a workout based around their constraint
 Firstly, a video stream from the user will be started. Here, the user exercises and the action recognition model will then look at the exercise being conducted. Recognising the exercise, the action recognition model will then prompt the LLM with the data obtained. So, if the form of the user's exercise is not apt, 
 the LLM will give a response that will suggest corrections in their form.
 Videos are also shown to the user which show specific exercises from the workout suggested by the LLM.
-Helooo
+
