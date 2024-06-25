@@ -24,8 +24,22 @@ while True:
     """
 import cv2
 import PoseModule as pm
-
-cap = cv2.VideoCapture("video.mp4")
+# import mediapipe as mp
+# import numpy as np
+# mp_drawing = mp.solutions.drawing_utils
+# mp_pose = mp.solutions.pose
+# # VIDEO FEED
+# cap = cv2.VideoCapture(0)
+# while cap.isOpened():
+#     ret, frame = cap.read()
+#     cv2.imshow('Mediapipe Feed', frame)
+    
+#     if cv2.waitKey(10) & 0xFF == ord('q'):
+#         break
+        
+# cap.release()
+# cv2.destroyAllWindows()
+cap = cv2.VideoCapture(0)
 detector = pm.PoseDetector()
 
 while True:
@@ -33,7 +47,7 @@ while True:
     if not success:
         break
 
-    img = cv2.resize(img, (1280, 720))
+    # img = cv2.resize(img, (1000, 600))
     img = detector.findPose(img)
     lmList, _ = detector.findPosition(img, draw=False)
     
@@ -48,7 +62,7 @@ while True:
                                          img=img)
 
     cv2.imshow("Image", img)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(10) & 0xFF == ord('q'):
         break
 
 cap.release()
