@@ -1,149 +1,126 @@
 import cv2
 import PoseModule as pm
-# import mediapipe as mp
-# import numpy as np
-# mp_drawing = mp.solutions.drawing_utils
-# mp_pose = mp.solutions.pose
-# # VIDEO FEED
-# cap = cv2.VideoCapture(0)
-# while cap.isOpened():
-#     ret, frame = cap.read()
-#     cv2.imshow('Mediapipe Feed', frame)
-    
-#     if cv2.waitKey(10) & 0xFF == ord('q'):
-#         break
+import threading
+
+class PoseEstimator:
+    def __init__(self):
+        self.cap = cv2.VideoCapture(0)
+        self.detector = pm.PoseDetector()
+        self.frame = None
+        self.lock = threading.Lock()
+        self.running = True
+
+    def capture_frame(self):
+        while self.running:
+            success, img = self.cap.read()
+            if success:
+                with self.lock:
+                    self.frame = cv2.resize(img, (640, 480))
+
+    def check_form(self, lmList):
+        feedback = []
+
+        # Define form criteria for hammer curls
+        good_form_min_angle = 190  # Lower bound for good form during curl
+        good_form_max_angle = 320  # Upper bound for good form during curl
         
-# cap.release()
-# cv2.destroyAllWindows()
-# cap = cv2.VideoCapture(0)
-# detector = pm.PoseDetector()
+        # Calculate angles for arms
+        angle_right_elbow, _ = self.detector.findAngle((lmList[12][0], lmList[12][1]),
+                                                       (lmList[14][0], lmList[14][1]),
+                                                       (lmList[16][0], lmList[16][1]))
 
-# while True:
-#     success, img = cap.read()
-#     if not success:
-#         break
+        angle_left_elbow, _ = self.detector.findAngle((lmList[11][0], lmList[11][1]),
+                                                      (lmList[13][0], lmList[13][1]),
+                                                      (lmList[15][0], lmList[15][1]))
 
-#     # img = cv2.resize(img, (1000, 600))
-#     img = detector.findPose(img)
-#     lmList, _ = detector.findPosition(img, draw=False)
-    
-#     if len(lmList) != 0:
-#         angle1, img = detector.findAngle((lmList[12][0], lmList[12][1]),
-#                                          (lmList[14][0], lmList[14][1]),
-#                                          (lmList[16][0], lmList[16][1]),
-#                                          img=img)
-#         angle2, img = detector.findAngle((lmList[11][0], lmList[11][1]),
-#                                          (lmList[13][0], lmList[13][1]),
-#                                          (lmList[15][0], lmList[15][1]),
-#                                          img=img)
+        # Check if both elbows are within the good form angle range
+        if not (good_form_min_angle <= angle_right_elbow <= good_form_max_angle):
+            feedback.append("Right arm angle out of optimal range")
 
-#     if len(lmList) != 0:
-#         # Calculate angle for right arm (shoulder, elbow, wrist)
-#         angle1, img = detector.findAngle((lmList[12][0], lmList[12][1]),
-#                                           (lmList[14][0], lmList[14][1]),
-#                                           (lmList[16][0], lmList[16][1]),
-#                                           img=img)        # Calculate angle for left arm (shoulder, elbow, wrist)
+        if not (good_form_min_angle <= angle_left_elbow <= good_form_max_angle):
+            feedback.append("Left arm angle out of optimal range")
 
-#         angle2, img = detector.findAngle((lmList[11][0], lmList[11][1]),
-#                                           (lmList[13][0], lmList[13][1]),
-#                                           (lmList[15][0], lmList[15][1]),
-#                                           img=img)
-#         # Display angles on the image
-#         cv2.putText(img, str(int(angle1)), 
-#                     (lmList[14][1] - 50, lmList[14][2] + 50), 
-#                     cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2)
-#         cv2.putText(img, str(int(angle2)), 
-#                     (lmList[13][1] - 50, lmList[13][2] + 50), 
-#                     cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2)
+        # Check if the back is straight
+        # Landmarks: 11 (left shoulder), 12 (right shoulder), 23 (left hip), 24 (right hip)
+        shoulder_midpoint = ((lmList[11][0] + lmList[12][0]) // 2, (lmList[11][1] + lmList[12][1]) // 2)
+        hip_midpoint = ((lmList[23][0] + lmList[24][0]) // 2, (lmList[23][1] + lmList[24][1]) // 2)
 
-#         # Evaluate form based on angles
-#         feedback = ""
-#         if 190 < angle1 < 350 and 190 < angle2 < 350:
-#             feedback = "Good form"
-#         else:
-#             feedback = "Correct your form"
+        # Calculate the angle of the torso (straight line between shoulders and hips)
+        torso_angle = self.calculate_angle(shoulder_midpoint, hip_midpoint)
 
-#         # Display feedback on the image
-#         cv2.putText(img, feedback, (50, 50), 
-#                     cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3)
+        # Define the range for a straight back (you might need to adjust these values)
+        min_torso_angle = 80  # Close to vertical
+        max_torso_angle = 100  # Close to vertical
 
-#     # Display the image
-#     cv2.imshow("Image", img)
-#     if cv2.waitKey(10) & 0xFF == ord('q'):
-#         break
+        if not (min_torso_angle <= torso_angle <= max_torso_angle):
+            feedback.append("Keep your back straight")
 
-# cap.release()
-import cv2
-import PoseModule as pm
+        return feedback, angle_right_elbow, angle_left_elbow, torso_angle
 
-cap = cv2.VideoCapture(0)
-detector = pm.PoseDetector()
+    def calculate_angle(self, point1, point2):
+        # Calculate the angle between two points
+        x1, y1 = point1
+        x2, y2 = point2
+        angle = abs(cv2.fastAtan2(y2 - y1, x2 - x1))
+        return angle
 
-while True:
-    success, img = cap.read()
-    if not success:
-        break
+    def process_frame(self):
+        while self.running:
+            if self.frame is None:
+                continue
 
-    img = cv2.resize(img, (1280, 720))
+            with self.lock:
+                img = self.frame.copy()
 
-    # Find pose and landmarks
-    img = detector.findPose(img)
-    lmList, _ = detector.findPosition(img, draw=False)
-    
-    if len(lmList) != 0:
-        # Check if user's body is within a certain range of the center of the screen
-        center_range = 100  # Adjust this range as needed
+            img = self.detector.findPose(img)
+            lmList, _ = self.detector.findPosition(img, draw=False)
+            
+            if len(lmList) != 0:
+                center_range = 100
+                img_height, img_width, _ = img.shape
+                center_x = img_width // 2
 
-        # Calculate the center of the screen
-        img_height, img_width, _ = img.shape
-        center_x = img_width // 2
+                is_within_center_range = (lmList[1][0] >= center_x - center_range) and (lmList[1][0] <= center_x + center_range)
+                neck_to_hip_dist = abs(lmList[8][1] - lmList[1][1])
+                whole_body_visible = (neck_to_hip_dist > 0) and (lmList[1][1] > 0 and lmList[1][1] < img_height) and (lmList[8][1] > 0 and lmList[8][1] < img_height)
 
-        # Check if neck landmark is within the range around the center
-        is_within_center_range = (lmList[1][0] >= center_x - center_range) and (lmList[1][0] <= center_x + center_range)
+                if is_within_center_range and whole_body_visible:
+                    feedback, angle_right_elbow, angle_left_elbow, torso_angle = self.check_form(lmList)
 
-        # Check if whole body is visible
-        neck_to_hip_dist = abs(lmList[8][1] - lmList[1][1])
-        whole_body_visible = (neck_to_hip_dist > 0) and (lmList[1][1] > 0 and lmList[1][1] < img_height) and (lmList[8][1] > 0 and lmList[8][1] < img_height)
+                    # Display the angles on the image
+                    cv2.putText(img, f"Right Elbow: {int(angle_right_elbow)}", 
+                                (lmList[14][0] - 50, lmList[14][1] - 20), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                    cv2.putText(img, f"Left Elbow: {int(angle_left_elbow)}", 
+                                (lmList[13][0] - 50, lmList[13][1] - 20), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                    cv2.putText(img, f"Torso: {int(torso_angle)}", 
+                                (50, 100), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                    
+                    # Display feedback on the image
+                    for i, msg in enumerate(feedback):
+                        cv2.putText(img, msg, (50, 150 + i*30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                    
+                    if not feedback:
+                        cv2.putText(img, "Good form", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3)
+                else:
+                    cv2.putText(img, "Please stay within the center range and ensure full body visibility", 
+                                (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
-        if is_within_center_range and whole_body_visible:
-            # Calculate angles for arms
-            angle1, img = detector.findAngle((lmList[12][0], lmList[12][1]),
-                                             (lmList[14][0], lmList[14][1]),
-                                             (lmList[16][0], lmList[16][1]),
-                                             img=img)
+            cv2.imshow("Image", img)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                self.running = False
 
-            angle2, img = detector.findAngle((lmList[11][0], lmList[11][1]),
-                                             (lmList[13][0], lmList[13][1]),
-                                             (lmList[15][0], lmList[15][1]),
-                                             img=img)
+    def run(self):
+        thread1 = threading.Thread(target=self.capture_frame)
+        thread2 = threading.Thread(target=self.process_frame)
+        thread1.start()
+        thread2.start()
+        thread1.join()
+        thread2.join()
+        self.cap.release()
+        cv2.destroyAllWindows()
 
-            # Display angles on the image
-            cv2.putText(img, str(int(angle1)), 
-                        (lmList[14][1] - 50, lmList[14][2] + 50), 
-                        cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2)
-            cv2.putText(img, str(int(angle2)), 
-                        (lmList[13][1] - 50, lmList[13][2] + 50), 
-                        cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2)
-
-            # Evaluate form based on angles
-            feedback = ""
-            if 190 < angle1 < 350 and 190 < angle2 < 350:
-                feedback = "Good form"
-            else:
-                feedback = "Correct your form"
-
-            # Display feedback on the image
-            cv2.putText(img, feedback, (50, 50), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3)
-        else:
-            # Display message if user is not within the center range or whole body is not visible
-            cv2.putText(img, "Please stay within the center range and ensure full body visibility", (50, 50), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-
-    # Display the image
-    cv2.imshow("Image", img)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-cap.release()
-cv2.destroyAllWindows()
+pose_estimator = PoseEstimator()
+pose_estimator.run()
