@@ -124,3 +124,114 @@ class PoseEstimator:
 
 pose_estimator = PoseEstimator()
 pose_estimator.run()
+# import cv2
+# import PoseModule as pm
+# import threading
+
+# class PoseEstimator:
+#     def __init__(self):
+#         self.cap = cv2.VideoCapture(0)
+#         self.detector = pm.PoseDetector()
+#         self.frame = None
+#         self.lock = threading.Lock()
+#         self.running = True
+
+#     def capture_frame(self):
+#         while self.running:
+#             success, img = self.cap.read()
+#             if success:
+#                 with self.lock:
+#                     self.frame = cv2.resize(img, (640, 480))
+
+#     def check_form(self, lmList):
+#         feedback = []
+
+#         # Define form criteria for hammer curls
+#         good_form_min_angle = 60  # Lower bound for good form during curl (adjusted for front view)
+#         good_form_max_angle = 120  # Upper bound for good form during curl (adjusted for front view)
+
+#         # Calculate angles for arms
+#         angle_right_elbow = self.detector.findAngle((lmList[12][0], lmList[12][1]),
+#                                                     (lmList[14][0], lmList[14][1]),
+#                                                     (lmList[16][0], lmList[16][1]))[0]
+
+#         angle_left_elbow = self.detector.findAngle((lmList[11][0], lmList[11][1]),
+#                                                    (lmList[13][0], lmList[13][1]),
+#                                                    (lmList[15][0], lmList[15][1]))[0]
+
+#         # Normalize the angles to a consistent range
+#         angle_right_elbow = 360 - angle_right_elbow if angle_right_elbow > 180 else angle_right_elbow
+#         angle_left_elbow = 360 - angle_left_elbow if angle_left_elbow > 180 else angle_left_elbow
+
+#         # Check if both elbows are within the good form angle range
+#         if not (good_form_min_angle <= angle_right_elbow <= good_form_max_angle):
+#             feedback.append("Right arm angle out of optimal range")
+
+#         if not (good_form_min_angle <= angle_left_elbow <= good_form_max_angle):
+#             feedback.append("Left arm angle out of optimal range")
+
+#         # Check if the shoulders are level
+#         shoulder_difference = abs(lmList[11][1] - lmList[12][1])
+#         max_shoulder_difference = 20  # Maximum pixel difference for level shoulders
+#         if shoulder_difference > max_shoulder_difference:
+#             feedback.append("Keep your shoulders level")
+
+#         return feedback, angle_right_elbow, angle_left_elbow
+
+#     def process_frame(self):
+#         while self.running:
+#             if self.frame is None:
+#                 continue
+
+#             with self.lock:
+#                 img = self.frame.copy()
+
+#             img = self.detector.findPose(img)
+#             lmList, _ = self.detector.findPosition(img, draw=False)
+
+#             if len(lmList) != 0:
+#                 center_range = 100
+#                 img_height, img_width, _ = img.shape
+#                 center_x = img_width // 2
+
+#                 is_within_center_range = (lmList[1][0] >= center_x - center_range) and (lmList[1][0] <= center_x + center_range)
+#                 neck_to_hip_dist = abs(lmList[8][1] - lmList[1][1])
+#                 whole_body_visible = (neck_to_hip_dist > 0) and (lmList[1][1] > 0 and lmList[1][1] < img_height) and (lmList[8][1] > 0 and lmList[8][1] < img_height)
+
+#                 if is_within_center_range and whole_body_visible:
+#                     feedback, angle_right_elbow, angle_left_elbow = self.check_form(lmList)
+
+#                     # Display the angles on the image
+#                     cv2.putText(img, f"Right Elbow: {int(angle_right_elbow)}", 
+#                                 (lmList[14][0] - 50, lmList[14][1] - 20), 
+#                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+#                     cv2.putText(img, f"Left Elbow: {int(angle_left_elbow)}", 
+#                                 (lmList[13][0] - 50, lmList[13][1] - 20), 
+#                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+
+#                     # Display feedback on the image
+#                     for i, msg in enumerate(feedback):
+#                         cv2.putText(img, msg, (50, 150 + i * 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
+#                     if not feedback:
+#                         cv2.putText(img, "Good form", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3)
+#                 else:
+#                     cv2.putText(img, "Please stay within the center range and ensure full body visibility", 
+#                                 (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
+#             cv2.imshow("Image", img)
+#             if cv2.waitKey(1) & 0xFF == ord('q'):
+#                 self.running = False
+
+#     def run(self):
+#         thread1 = threading.Thread(target=self.capture_frame)
+#         thread2 = threading.Thread(target=self.process_frame)
+#         thread1.start()
+#         thread2.start()
+#         thread1.join()
+#         thread2.join()
+#         self.cap.release()
+#         cv2.destroyAllWindows()
+
+# pose_estimator = PoseEstimator()
+# pose_estimator.run()
