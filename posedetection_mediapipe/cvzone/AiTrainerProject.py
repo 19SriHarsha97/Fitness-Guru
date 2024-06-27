@@ -2,9 +2,26 @@ import cv2
 import mediapipe as mp
 import threading
 import numpy as np
+import json
+
+# Step 2: Function to Read the Dataset from a JSON File
+def load_workout_dataset(file_path):
+    with open(file_path, 'r') as file:
+        workout_dataset = json.load(file)
+    return workout_dataset
+
+# Load the dataset
+workout_dataset = load_workout_dataset('posedetection_mediapipe/cvzone/workout_dataset.json')
+
+# Generalized function to access the dataset
+def get_workout_info(workout_name):
+    if workout_name in workout_dataset:
+        return workout_dataset[workout_name]
+    else:
+        raise ValueError("Workout not found in dataset")
 
 class PoseEstimator3D:
-    def __init__(self):
+    def __init__(self, workout_name):
         self.cap = cv2.VideoCapture(0)
         self.pose = mp.solutions.pose.Pose(static_image_mode=False, model_complexity=2, enable_segmentation=False, min_detection_confidence=0.5)
         self.mp_drawing = mp.solutions.drawing_utils
@@ -12,6 +29,7 @@ class PoseEstimator3D:
         self.lock = threading.Lock()
         self.running = True
         self.prev_wrist_positions = []
+        self.workout_info = get_workout_info(workout_name)
 
     def capture_frame(self):
         while self.running:
@@ -23,19 +41,18 @@ class PoseEstimator3D:
     def check_form(self, landmarks):
         feedback = []
         
-        # Define form criteria for hammer curls
-        good_form_min_angle = 30  # Lower bound for good form during curl
-        good_form_max_angle = 180  # Upper bound for good form during curl
+        angle_ranges = self.workout_info['angle_range']
+        relevant_landmarks = self.workout_info['landmarks']
         
         # Calculate angles for arms
-        angle_right_elbow = self.calculate_angle(landmarks[11], landmarks[13], landmarks[15])
-        angle_left_elbow = self.calculate_angle(landmarks[12], landmarks[14], landmarks[16])
+        angle_right_elbow = self.calculate_angle(landmarks[relevant_landmarks['right_elbow'][0]], landmarks[relevant_landmarks['right_elbow'][1]], landmarks[relevant_landmarks['right_elbow'][2]])
+        angle_left_elbow = self.calculate_angle(landmarks[relevant_landmarks['left_elbow'][0]], landmarks[relevant_landmarks['left_elbow'][1]], landmarks[relevant_landmarks['left_elbow'][2]])
 
         # Check if both elbows are within the good form angle range
-        if not (good_form_min_angle <= angle_right_elbow <= good_form_max_angle):
+        if not (angle_ranges['right_elbow'][0] <= angle_right_elbow <= angle_ranges['right_elbow'][1]):
             feedback.append("Right arm angle out of optimal range")
 
-        if not (good_form_min_angle <= angle_left_elbow <= good_form_max_angle):
+        if not (angle_ranges['left_elbow'][0] <= angle_left_elbow <= angle_ranges['left_elbow'][1]):
             feedback.append("Left arm angle out of optimal range")
         
         # Check if back is straight
@@ -127,5 +144,5 @@ class PoseEstimator3D:
         self.cap.release()
         cv2.destroyAllWindows()
 
-pose_estimator = PoseEstimator3D()
+pose_estimator = PoseEstimator3D("hammer_curls")
 pose_estimator.run()
