@@ -1,0 +1,2 @@
+https://www.youtube.com/watch?v=LhnCsygAvzY
+RAG with langchain and openai(try to use ollama instead)
