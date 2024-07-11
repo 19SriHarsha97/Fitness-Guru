@@ -1,8 +1,0 @@
-                                        Fitness Guru LLM
-
-Users can login to their personalized accounts where suggestions will be given based on their age, ailments, etc,.
-Basically, anything that is personal to a user.
-
-Users will be able to prompt the LLM for a workout based around their constraints.
-Firstly, a video stream from the user will be started. Here, the user exercises and the action recognition model will then look at the exercise being conducted. Recognising the exercise, the action recognition model will then prompt the LLM with the data obtained. It works by taking the positions of the joints and checking the accuracy of the movement. So, if the form of the user's exercise is not apt , an avatar will provide corrections in the form of the user  by giving a text-to-speech based suggestions. 
-The videos are carefully handpicked from various workout programs on the internet.
