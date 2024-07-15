@@ -39,7 +39,7 @@
             {% endif %}
             {% if output %}
             <div class="output-container">
-                <p>{{ output.message.content|safe }}</p> <!-- Use the safe filter to render HTML from output -->
+                <p>{{ output|safe }}</p> <!-- Use the safe filter to render HTML from output -->
             </div>
             {% endif %}
         </div>
