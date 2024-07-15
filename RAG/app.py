@@ -134,7 +134,7 @@ def index():
             user_data = records.find_one({"email": email})
             new_email = user_data['email']
             #if registered redirect to logged in as the registered user
-            return render_template('chatbot.html', email=new_email)
+            return render_template('login.html', email=new_email)
     return render_template('index.html')
 
 @app.route("/login", methods=["POST", "GET"])
@@ -188,6 +188,7 @@ def chatbot():
 
     query_input = None
     response = None
+    response_content = None
     
     SYSTEM_PROMPT = """If you're unsure, just say that you don't know.
         The text or context that you have been provided is called as the 'fitness database'.
@@ -216,16 +217,16 @@ def chatbot():
                     {
                         "role": "system",
                         "content": SYSTEM_PROMPT
-                        + "\n".join(paragraphs[item[1]] for item in most_similar_chunks),
+                        + "/n".join(paragraphs[item[1]] for item in most_similar_chunks),
                     },
                     {"role": "user", "content": query_input},
                 ],
             )
-                logging.info(f"Response from Ollama:{response}")
+                response_content = response["message"]["content"].replace("\n", "<br>")
             except Exception as e:
                 logging.error(f"Error during chatbot invocation: {e}")
                 output = "Sorry, an error occurred while processing your request."
-    return render_template('chatbot.html', query_input=query_input, output=response)
+    return render_template('chatbot.html', query_input=query_input, output=response_content)
         # print("\n\n")
         # print(response["message"]["content"])
 
