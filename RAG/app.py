@@ -14,13 +14,14 @@ app = Flask(__name__)
 #encryption relies on secret keys so they could be run
 app.secret_key = "testing"
 
-# #connect to your Mongo DB database
-def MongoDB():
-    client = MongoClient("mongodb://127.0.0.1:27017")
-    db = client.get_database('Fitness_guru')
-    records = db.register
-    return records
-# records = MongoDB()
+# # #connect to your Mongo DB database
+# def MongoDB():
+#     client = MongoClient("mongodb:z/127.0.0.1:27017")
+#     db = client.get_database('Fitness_guru')
+#     records = db.register
+#     links = db.YT_links
+#     return records,links
+# # records = MongoDB()
 
 
 ##Connect with Docker Image###
@@ -31,14 +32,14 @@ def dockerMongoDB():
     # pw = "test123"
     # hashed = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt())
     records = db.register
+    links = db.YT_links
     # records.insert_one({
     #     "name": "Test Test",
     #     "email": "test@yahoo.com",
     #     "password": hashed
     # })
-    return records
-
-records = dockerMongoDB()
+    return records,links
+records,links = dockerMongoDB()
 
 # open a file and return paragraphs
 def parse_file(filename):
@@ -182,9 +183,23 @@ def logout():
     else:
         return render_template('index.html')
 
+@app.route('/input',methods=["POST","GET"])
+def input_v():
+    return render_template("input_v.html")
 
+@app.route('/play', methods=['POST'])
+def play_video():
+    exercise_name = request.form.get('exercise_name')
+    if exercise_name:
+        link = links.find_one({"exercise_name":exercise_name})
+    link = link["file_path"]
+    if link:
+        return render_template("Video_player.html",link=link)
+    else:
+        return render_template("VNF.html",link=link)
+    
 @app.route('/chatbot', methods=['GET', 'POST'])
-def chatbot():
+def chatbot(): 
 
     query_input = None
     response = None
@@ -223,12 +238,32 @@ def chatbot():
                 ],
             )
                 response_content = response["message"]["content"].replace("\n", "<br>")
+                # Now we make a second request to the model to extract exercise names
+                exercise_names_response = ollama.chat(
+                    model="llama3",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": """Extract just the names of individual exercises ,nothing else,just give me the names in a array format.
+                            Dont write stuff like "Extracted Exercise Names: Here are the names of individual exercises:" or "Extracted Exercise Names:".
+                            from the following response: """
+                        },
+                        {"role": "user", "content": response["message"]["content"]}
+                    ],
+                )
+                exercise_names = exercise_names_response["message"]["content"]
+                
+                # Print the exercise names to the console
+                print("Extracted Exercise Names:", exercise_names)
             except Exception as e:
                 logging.error(f"Error during chatbot invocation: {e}")
                 output = "Sorry, an error occurred while processing your request."
+    # return response_content
     return render_template('chatbot.html', query_input=query_input, output=response_content)
         # print("\n\n")
         # print(response["message"]["content"])
+
+
 
 
 if __name__ == "__main__":
