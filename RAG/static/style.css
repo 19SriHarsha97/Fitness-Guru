@@ -128,6 +128,11 @@ body{
 .chat-app-container form .form-container:focus-visible, .chat-app-container form .form-container:focus-within, .chat-app-container form .form-container:active, .chat-app-container form .form-container:hover{
     /* box-shadow: 0 8px 32px 0 rgba(0, 4, 67, 0.675); */
 }
+
+.response-topbar
+{
+    border-bottom: black;
+}
 input#query-input {
     width: 100%;
     background: transparent;
@@ -224,6 +229,9 @@ input#query-input:-internal-autofill-selected{
   ::-webkit-scrollbar-thumb:hover {
     background: #3a3a3a; 
   }
+
+  
+
   /* HTML: <div class="loader"></div>
 .loader {
     width: 50px;
